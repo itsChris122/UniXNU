@@ -17,7 +17,8 @@ from .config import load_toml
 from .util import Error, log, run, sha256_file, tool
 
 DEFAULTS = {'header_version': 0, 'base': 0, 'kernel_offset': 0x8000, 'tags_offset': 0x1e00000, 'pagesize': 4096}
-MKBOOTIMG_FLAGS = ('base', 'kernel_offset', 'tags_offset', 'pagesize', 'header_version', 'ramdisk_offset', 'second_offset', 'cmdline')
+MKBOOTIMG_FLAGS = ('base', 'kernel_offset', 'tags_offset', 'pagesize', 'header_version', 'ramdisk_offset', 'second_offset', 'cmdline',
+                   'dtb_offset')
 
 
 def compile_shim(uefi, base, size, requires_header, scratch):
@@ -102,6 +103,11 @@ def build(ctx, uefi, fd, dtb, ramdisk=None, output=None):
             ramdisk_path = scratch / 'ramdisk'
             ramdisk_path.write_bytes(b'')
         command = ['python3', mkbootimg, '--kernel', kernel_path, '--ramdisk', ramdisk_path, '-o', out]
+        if image['header_version'] >= 2:
+            # Header v2+ has its own DTB section; the bootloader reads it there, not after the kernel.
+            dtb_path = scratch / 'dtb'
+            dtb_path.write_bytes(tree)
+            command += ['--dtb', dtb_path]
         for key in MKBOOTIMG_FLAGS:
             if key in image:
                 command += [f'--{key}', str(image[key])]
