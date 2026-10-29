@@ -72,8 +72,13 @@ if result.returncode or 'PASS' not in result.stdout:
 # The actual KMD must defer native handle/view/IOVA retirement, bound pressure waits,
 # and preserve ownership on failures. This exercises real transport code, not pixels.
 deferred = out / 'deferred_bo'
+# guamp: Adreno740 is pinned at 5c8c145 (the guamp kernel's ABI), whose tests/hostsim/deferred_bo.cpp predates the BO cache and the
+# growing retire queue of this Turnip; the copy in scripts/guamp-hostsim is Adreno740 a37f794's (feat/ipados27-gpu-parity), same ABI.
+deferred_source = ROOT / 'scripts/guamp-hostsim/deferred_bo.cpp'
+if not deferred_source.exists():
+    deferred_source = sim / 'deferred_bo.cpp'
 subprocess.run(['xcrun', 'clang++', '-std=c++23', '-O1', '-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter',
-                '-I', '/opt/homebrew/include', '-I', kit, sim / 'deferred_bo.cpp', '-o', deferred], check=True)
+                '-I', '/opt/homebrew/include', '-I', kit, deferred_source, '-o', deferred], check=True)
 deferred_env = dict(env, TU_DARWIN_RETIRE_TRACE='1')
 deferred_env.pop('HOSTSIM_FAIL_USER_UNMAP', None)
 for mode in ['normal', 'busy', 'fence-error', 'free-error', 'lease-error', 'view-error', 'map-cleanup-error', 'pressure']:
